@@ -1,0 +1,251 @@
+<!--
+
+██      ██    ██ ███    ██  █████  ██████      ██       █████  ███    ██ ██████   █████  ██████  
+██      ██    ██ ████   ██ ██   ██ ██   ██     ██      ██   ██ ████   ██ ██   ██ ██   ██ ██   ██ 
+██      ██    ██ ██ ██  ██ ███████ ██████      ██      ███████ ██ ██  ██ ██   ██ ███████ ██████  
+██      ██    ██ ██  ██ ██ ██   ██ ██   ██     ██      ██   ██ ██  ██ ██ ██   ██ ██   ██ ██   ██ 
+███████  ██████  ██   ████ ██   ██ ██   ██     ███████ ██   ██ ██   ████ ██████  ██   ██ ██   ██ 
+
+Author: Peregrine Fu
+
+Objective:
+Lunar Landar is a simple resource management game where you must safely land a small spacecraft on the lunar surface while only able to control the craft's fuel burn rate.
+
+Design:
+The code isn't particularly elaborate. Most functions are self-contained so they can be reused where need be. This roughly follows a Model-View-Controller design paradigm, with the game variables and update() function as the Model, the draw() function as the View, and the input/click-to-advance functions as the Controller.
+
+Every "turn," lasting 10 seconds, the user may input a new fuel burn rate for the ship to use for the next 10-second turn. It calculates the average thrust over that duration, calculates the force based on that thrust and the ship's current mass (since it loses fuel), calculates its velocity based on that force, then finally calculates its new altitude based on that velocity. You win if you can get the ship to land with a velocity of less than 20 metres per second.
+
+-->
+
+<!doctype HTML>
+<html>
+    <head>
+        <title>Lunar Landar</title>
+        
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+        
+        <script>
+            let time;
+            let altitude;
+            let velocity;
+            let fuelSupply;
+            let fuelBurn;
+            let currentThrust;
+            
+            const gravity = 1.62;
+            const landerMass = 8500;
+            const digits = 3;
+            
+            function setup() {
+                time = 0;
+                altitude = 200000;
+                velocity = 1600;
+                fuelSupply = 8000;
+                currentThrust = 0;
+                
+                document.getElementById("time").innerHTML = "Time Elapsed: " + time + " sec";
+                document.getElementById("thrust").innerHTML = "Thrust: " + currentThrust + " kg/s";
+                document.getElementById("velocity").innerHTML = "Velocity: " + velocity + " m/s";
+                document.getElementById("altitude").innerHTML = "altitude: " + altitude + " m";
+                document.getElementById("fuel").innerHTML = "Fuel: " + fuelSupply + " kg";
+                
+                document.getElementById("advance").addEventListener('click', myClick);
+                
+                document.getElementById("restart").addEventListener('click', reset);
+            }
+            
+            function update() {
+                fuelBurn = document.getElementById("burnRate").value;
+                
+                console.log("SOS");
+                
+                if ((fuelBurn * 10) > fuelSupply) {
+                    fuelBurn = fuelSupply / 10;
+                }
+                
+                time += 10;
+                fuelSupply -= fuelBurn * 10;
+                currentThrust = thrust();
+                velocity += (gravity * 10) - thrust();
+                altitude -= velocity * 10;
+                
+                if (altitude < 0) {
+                    endGame();
+                    altitude = 0;
+                    velocity = 0;
+                }
+            }
+            
+            function draw() {
+                document.getElementById("time").innerHTML = "Time Elapsed: " + time + " sec";
+                document.getElementById("thrust").innerHTML = "Thrust: " + roundToDigits(currentThrust, digits) + " kg/s";
+                document.getElementById("velocity").innerHTML = "Velocity: " + roundToDigits(velocity, digits) + " m/s";
+                document.getElementById("altitude").innerHTML = "altitude: " + roundToDigits(altitude, digits) + " m";
+                document.getElementById("fuel").innerHTML = "Fuel: " + fuelSupply + " kg";
+            }
+            
+            function totalMass() {
+                return landerMass + fuelSupply;
+            }
+            
+            function thrust() {
+                return 30000 * fuelBurn / totalMass();
+            }
+            
+            function gravitationalForce() {
+                return totalMass() * gravity;
+            }
+            
+            function roundToDigits(val, num) {
+                let roundedVal = Math.round((val + Number.EPSILON) * Math.pow(10, num)) / Math.pow(10, num);
+                return roundedVal;
+            }
+            
+            function myClick() {
+                if (document.getElementById("burnRate").value >= 0 && document.getElementById("burnRate").value <= 90) {
+                    update();
+                    draw();
+                } else {
+                    document.getElementById("error").innerHTML = "INPUT OUTSIDE RANGE — TRY AGAIN";
+                }
+            }
+            
+            function endGame() {
+                document.getElementById("advance").removeEventListener("click", myClick);
+
+                if (velocity < 20) {
+                    document.getElementById("end").innerHTML = "You landed the lunar module safely.<br>The lunar explorers owe you their lives.<br>Good work.";
+                } else {
+                    document.getElementById("end").innerHTML = "The Darkstar IX lunar module collided with the lunar surface at " + roundToDigits(velocity, digits) + " metres per second.<br>None of the supplies aboard remained intact, leading to the deaths of all our explorers.<br>It happens to the best of us."
+                }
+            }
+            
+            function reset() {
+                document.getElementById("end").innerHTML = "";
+                document.getElementById("burnRate").value = 0;
+                
+                document.getElementById("restart").removeEventListener("click", reset);
+                
+                setup();
+            }
+            
+        </script>
+        
+        <style>
+            @import url("https://fonts.googleapis.com/css?family=VT323&display=swap");
+            
+            body {
+                background-color: #141414;
+                color: #F0F0F0;
+                font-family: VT323, monospace;
+                text-transform: uppercase;
+                font-size: 22px;
+                line-height: 32px;
+                text-align: center;
+                padding: 10px;
+            }
+            
+            header {
+                text-align: left;
+                margin: 50px;
+            }
+            
+            footer {
+                position: absolute;
+                bottom: 60px;
+                left: 0;
+                right: 0;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            
+            sign {
+                font-size: 13px;
+            }
+            
+            .scanline {
+                content: " ";
+                display: block;
+                position: absolute;
+                top: 0;
+                left: 0;
+                bottom: 0;
+                right: 0;
+                background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+                z-index: 2;
+                background-size: 100% 2px, 3px 100%;
+                pointer-events: none;
+            }
+            
+            .unselectable {
+                -webkit-touch-callout: none;
+                -webkit-user-select: none;
+                -khtml-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+            
+            #error {
+                color: orangered;
+            }
+            
+            #restart {                
+                color: #60E0F0;
+            }
+            
+        </style>
+    </head>
+    
+    <body onload="setup()">
+        <div class="scanline"></div>
+        
+        <header id="intro">
+            > We have lost contact with the Darkstar IX lunar module<br>
+            > The only system left online is the fuel burner<br>
+            > Your mission is to land the module safely<br>
+            > The lives of our astronauts on the lunar surface depend on its supplies arriving intact<br>
+            > Good luck.
+        </header>
+        
+        <br>
+        
+        <a id="time"></a><br>
+        <a id="thrust"></a><br>
+        <a id="velocity"></a><br>
+        <a id="altitude"></a><br>
+        <a id="fuel"></a>
+        
+        <br><br>
+        
+        <a>Enter fuel burn rate between 0kg/s (freefall) and 90kg/s (max thrust).</a>
+        
+        <br>
+        
+        <input type="number" id="burnRate" name="burnRate" min="0" max ="90" value="0">
+        
+        <br><br><br>
+        
+        <a class="unselectable" id="advance">
+            ——————————————————————————————<br>
+            | CLICK TO ADVANCE 10 SECONDS |<br>
+            ——————————————————————————————
+        </a>
+        
+        <br><br>
+        
+        <a id="error"></a>
+            
+        <br><br>
+        
+        <a id="end"></a>
+        
+        <footer>
+            <a class="unselectable" id="restart">CLICK TO RESTART</a>
+            <br>
+            <br>
+            <sign>© Peregrine Fu 2021</sign>
+        </footer>
+    </body>
+</html>
